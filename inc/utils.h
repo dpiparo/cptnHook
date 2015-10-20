@@ -1,8 +1,7 @@
 #ifndef _UTILS__H
 #define _UTILS__H
 
-#include "malloc.h"
-
+#include <stdlib.h>
 #include <unistd.h>
 #include <cstdio>
 

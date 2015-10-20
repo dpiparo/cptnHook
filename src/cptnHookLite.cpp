@@ -26,9 +26,10 @@ are saved in compressed binary format.
 //  Utils ----------------------------------------------------------------------
 
 static std::string GetCwd(){
-   auto cwdAsPtr = get_current_dir_name();
+   const std::size_t len = 4096;
+   char cwdAsPtr[len];
+   getcwd(cwdAsPtr, len);
    std::string cwdAsString(cwdAsPtr);
-   free(cwdAsPtr);
    return cwdAsString;
 }
 

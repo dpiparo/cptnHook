@@ -28,7 +28,7 @@ std::size_t Reader<T>::Print() {
    unsigned int hash = 0;
    std::size_t bytesRead = 0;
    unsigned int rowNumber = 0;
-   while(retcode =  gzread (fFilePtr, buffer, bufferLenghtInBytes)){
+   while( (retcode = gzread (fFilePtr, buffer, bufferLenghtInBytes)) ){
       if (-1 == retcode) printf("Error while reading!\n");
       auto x = *((T*) buffer);
       hash = buffer[fpSize];

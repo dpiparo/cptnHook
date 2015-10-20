@@ -46,7 +46,6 @@ endmacro (add_cptnHookLite_exe)
 
 # The executables 
 add_cptnHookLite_exe (writerReader z)
-add_cptnHookLite_exe (writerReaderSubDir z)
 add_cptnHookLite_exe (reader z)
 add_cptnHookLite_exe (simpleProg)
 
