@@ -13,7 +13,10 @@ libPath = thisPath+"/../lib/"
 cptnhooklib = libPath+'libcptnHookLite'+libraryExtension
 
 def getCommandAndArgs():
-   p = argparse.ArgumentParser(description='Cptnhook: a tool to study function arguments.\nUsage: cptnhook [args] -- program [args]')
+   p = argparse.ArgumentParser(description='Cptnhook: a tool to study function arguments.',
+                               formatter_class=argparse.RawDescriptionHelpFormatter,
+                               usage='cptnhook [args] -- program [args]\n'
+                                     'IMPORTANT: note the "--" before the command invocation!')
    p.add_argument('-o', '--output', nargs='?', default = '', help='Profile output directory.')
    p.add_argument('--root', action='store_true', default = '', help='Create ROOT output.')
    p.add_argument('--debug', action='store_true', default = '', help='Enable debug output.')
@@ -21,7 +24,7 @@ def getCommandAndArgs():
    try:
        index = argv.index('--')
    except:
-      print "Please specify a program to profile after the '--' separator"
+      p.print_help()
       sys.exit(1)
    cprnHookArgs = argv[1:index]
    progArgs = argv[index+1:]   
