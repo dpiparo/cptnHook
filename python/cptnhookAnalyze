@@ -1,0 +1,83 @@
+#! /usr/bin/env python
+
+# Any reference to igprof-analyze is not intentional ;-)
+
+import sys
+import os
+import struct
+import argparse
+import gzip
+import array
+import xml.etree.ElementTree as ET
+import ROOT
+
+def getArgs():
+    p = argparse.ArgumentParser(description='Usage: cptnhook-analyse [args] profileDirectory.')
+    p.add_argument('profileDir', nargs='+', help='The directory where the profile is stored.')
+    p.add_argument('--root', action='store_true', default = '', help='Create ROOT output.')
+    return p.parse_args()
+
+def parseBTVector(profileDir):
+    tree = ET.parse(profileDir+'/backtraceMap.xml')
+    root = tree.getroot()        
+    btVector = ROOT.std.vector('string')()
+    btVector.reserve(1024)           
+    for bt in root.iter('bt'):
+        btStr =  bt.get('val').replace("@CR@","\n")
+        #btHash =  int(bt.get('hash'))
+        btVector.push_back(btStr)
+    return btVector
+  
+def getTrees(profileDir):
+   '''Loop over compressed files and fill a tree per function.
+   It could be optimised reading more entries at the time'''
+   compressedFileNames = filter(lambda s: s.endswith("hook.gz") , os.listdir(profileDir))
+   trees = []
+   for compressedFileName in compressedFileNames:
+      print "*** Analysing %s ..." %compressedFileName      
+      isDp = ".dp." in compressedFileName
+      precisionMark = ".dp" if isDp else ".sp"
+      treeName = compressedFileName[:compressedFileName.index(precisionMark)]      
+      t = ROOT.TTree(treeName, treeName)
+      inputVal = array.array('d' if isDp else 'f', [0.])
+      hashVal = array.array('I', [0])
+      t.Branch("value", inputVal, "value/%s" % 'D' if isDp else 'F')
+      t.Branch("hash", hashVal, "hash/i")
+      
+      fpSize = 8 if isDp else 4
+      blockSize = fpSize + 4 # fp + unsigned int
+      dataDescr = 'dI' if isDp else 'fI' 
+      with gzip.open(profileDir+"/"+compressedFileName, 'rb') as compressedFile:
+          while True:
+              block = compressedFile.read(blockSize)              
+              if not block: break
+              val, theHash = struct.unpack_from(dataDescr, block)
+              inputVal[0] = val
+              hashVal[0] = theHash
+              t.Fill()
+      trees.append(t)
+      
+   return trees
+   
+def analyze(profileDir, toROOT = False):
+    ''' Convert output to a ROOT file '''
+    ofileName = profileDir.replace("/","_")+".root"
+    ofile = ROOT.TFile.Open(ofileName,"recreate")
+    
+    btVector = parseBTVector(profileDir)
+    trees = getTrees(profileDir)
+    
+    ofile.WriteObject(btVector, "backtraceVector")
+    for tree in trees:
+       tree.Write()
+    ofile.Close()
+    
+    return 0
+ 
+ 
+
+if __name__ == "__main__":
+    args = getArgs()
+    retcode = analyze(profileDir = args.profileDir[0], toROOT = args.root)
+    sys.exit(retcode)
+   
