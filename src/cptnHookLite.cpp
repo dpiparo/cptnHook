@@ -78,18 +78,18 @@ static std::string Backtrace(int skip = 1){
          int status = -1;
          if (info.dli_sname[0] == '_')
             demangled = abi::__cxa_demangle(info.dli_sname, NULL, 0, &status);
-         snprintf(buf, sizeof( buf), "%s\n",
+         snprintf(buf, sizeof( buf), "%s",
             status == 0 ? demangled : info.dli_sname == 0 ? symbols[i] : info.dli_sname);
          free(demangled);
       } else {
-      snprintf(buf, sizeof(buf), "%s\n",symbols[i]);
+      snprintf(buf, sizeof(buf), "%s",symbols[i]);
       }
-      trace_buf << buf;
+      trace_buf << buf << "@CR@";
    }
 
    free(symbols);
    if (nFrames == nMaxFrames)
-      trace_buf << "[truncated]\n";
+      trace_buf << "[truncated]\\n\n";
    return trace_buf.str();
 }
 
@@ -101,12 +101,13 @@ public:
    Hasher(){};
    ~Hasher(){ //Here the dump on disk
       logInfo("Hasher","Dumping hash-backtrace map");
-      std::string ofileName(GetReportDir()+"/backtraceMap.hook.txt");
+      std::string ofileName(GetReportDir()+"/backtraceMap.xml");
       std::ofstream ofile(ofileName);
+      ofile << "<cptnHookBackTraces>\n";
       for (auto&& stackHashPair : fHashRegistry){
-         ofile << "CPTNHOOK_BACKTRACE_START " << stackHashPair.second << std::endl
-               << stackHashPair.first << "CPTNHOOK_BACKTRACE_END" << std::endl;
+         ofile << " <bt hash=\"" << stackHashPair.second << "\" val=\"" << stackHashPair.first << "\" />" << std::endl;
       }
+      ofile << "</cptnHookBackTraces>\n";
       ofile.close();
    }
    unsigned int Hash(const std::string& s){
@@ -217,7 +218,7 @@ Writer<double> dpCoshWriter(GetWriterName<double>("cosh"));
 Writer<double> dpAcoshWriter(GetWriterName<double>("acosh"));
 Writer<double> dpTanhWriter(GetWriterName<double>("tanh"));
 Writer<double> dpAtanhWriter(GetWriterName<double>("atanh"));
-Writer<double> dpAtanhWriter(GetWriterName<double>("cbrt"));
+Writer<double> dpCbrtWriter(GetWriterName<double>("cbrt"));
 Writer<float> spExpWriter(GetWriterName<float>("expf"));
 Writer<float> spLogWriter(GetWriterName<float>("logf"));
 Writer<float> spSinWriter(GetWriterName<float>("sinf"));
