@@ -44,7 +44,9 @@ endmacro (add_cptnHookLite_exe)
 
 # The tests -----------------------------------------------------------
 
-# The executables 
+# The executables
+file(COPY ${CMAKE_SOURCE_DIR}/python/cptnhook DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+file(COPY ${CMAKE_SOURCE_DIR}/python/cptnhookAnalyze DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 add_cptnHookLite_exe (writerReader z)
 add_cptnHookLite_exe (reader z)
 add_cptnHookLite_exe (simpleProg)
