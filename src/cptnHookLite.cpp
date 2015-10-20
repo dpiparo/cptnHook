@@ -104,7 +104,7 @@ public:
       std::string ofileName(GetReportDir()+"/backtraceMap.hook.txt");
       std::ofstream ofile(ofileName);
       for (auto&& stackHashPair : fHashRegistry){
-         ofile << "CPTNHOOK_BACKTRACE_START" << stackHashPair.second << std::endl
+         ofile << "CPTNHOOK_BACKTRACE_START " << stackHashPair.second << std::endl
                << stackHashPair.first << "CPTNHOOK_BACKTRACE_END" << std::endl;
       }
       ofile.close();
@@ -183,7 +183,8 @@ functions =["exp",
             "cosh",
             "acosh",
             "tanh",
-            "atanh"] 
+            "atanh",
+            cbrt] 
 
 # Print Writers -------------------------------------------
 for function in functions:
@@ -216,6 +217,7 @@ Writer<double> dpCoshWriter(GetWriterName<double>("cosh"));
 Writer<double> dpAcoshWriter(GetWriterName<double>("acosh"));
 Writer<double> dpTanhWriter(GetWriterName<double>("tanh"));
 Writer<double> dpAtanhWriter(GetWriterName<double>("atanh"));
+Writer<double> dpAtanhWriter(GetWriterName<double>("cbrt"));
 Writer<float> spExpWriter(GetWriterName<float>("expf"));
 Writer<float> spLogWriter(GetWriterName<float>("logf"));
 Writer<float> spSinWriter(GetWriterName<float>("sinf"));
@@ -230,6 +232,7 @@ Writer<float> spCoshWriter(GetWriterName<float>("coshf"));
 Writer<float> spAcoshWriter(GetWriterName<float>("acoshf"));
 Writer<float> spTanhWriter(GetWriterName<float>("tanhf"));
 Writer<float> spAtanhWriter(GetWriterName<float>("atanhf"));
+Writer<float> spCbrtWriter(GetWriterName<float>("cbrtf"));
 
 auto exp(double x) -> decltype(x){
    auto s = Backtrace();
@@ -329,6 +332,13 @@ auto atanh(double x) -> decltype(x){
    return origf(x);
 }
 
+auto cbrt(double x) -> decltype(x){
+   auto s = Backtrace();
+   dpCbrtWriter.Write(x, gHasher.Hash(s));
+   static auto origf = getOriginalSym<double>("cbrt");
+   return origf(x);
+}
+
 auto expf(float x) -> decltype(x){
    auto s = Backtrace();
    spExpWriter.Write(x, gHasher.Hash(s));
@@ -424,5 +434,12 @@ auto atanhf(float x) -> decltype(x){
    auto s = Backtrace();
    spAtanhWriter.Write(x, gHasher.Hash(s));
    static auto origf = getOriginalSym<float>("atanhf");
+   return origf(x);
+}
+
+auto cbrtf(double x) -> decltype(x){
+   auto s = Backtrace();
+   spCbrtWriter.Write(x, gHasher.Hash(s));
+   static auto origf = getOriginalSym<double>("cbrtf");
    return origf(x);
 }
