@@ -136,7 +136,10 @@ class Hasher{
   unsigned int fHash = 0;
   std::unordered_map<std::string, unsigned int> fHashRegistry;
 public:
-   Hasher(){};
+   Hasher(){
+      // Remove any preload library
+      setenv("LD_PRELOAD","", true);
+   };
    ~Hasher(){ //Here the dump on disk
       logInfo("Hasher","Dumping hash-backtrace map");
       std::string ofileName(GetReportDir()+"/backtraceMap.xml");
