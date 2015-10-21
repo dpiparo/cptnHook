@@ -74,7 +74,7 @@ Writer<T>::Writer(const char* filename, std::size_t cacheSize):
       fCacheMaxSize(cacheSize),
       fCacheValues(cacheSize),
       fElementSize(sizeof(typename decltype(fCacheValues)::value_type)){
-      gzbuffer(fFilePtr, DEFAULTCACHESIZE);
+//       gzbuffer(fFilePtr, DEFAULTCACHESIZE);
    };
    
 template<class T>
