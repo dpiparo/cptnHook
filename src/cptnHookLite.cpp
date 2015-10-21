@@ -17,6 +17,7 @@ are saved in compressed binary format.
 #include <string>
 #include <sstream>
 #include <unordered_map>
+#include <map>
 
 #include "writer.h"
 #include "utils.h"
@@ -64,39 +65,63 @@ static std::string GetReportDir(){
    return GetCwd()+"/"+reportDirName;
 }
 
+template <class T>
+inline void hashCombiner(std::size_t& seed, const T& v)
+{
+    std::hash<T> hasher;
+    seed ^= hasher(v) + 0x9e3779b9 + (seed<<6) + (seed>>2);
+}
+
+std::size_t getStackHash(void **ptrArr, int size){
+   std::size_t seed=0;
+   for (int i=0;i<size;++i) hashCombiner(seed, ptrArr[i]);
+   return seed;
+}
+
 #ifndef USE_LIBUNWIND
-// // Get the backtrace
-static std::string Backtrace(int skip = 1){
-   static void *callstack[1024];
-   const int nMaxFrames = sizeof(callstack) / sizeof(callstack[0]);
+// Get the backtrace
+static const std::string& Backtrace(){
+   const int nMaxFrames = 128;
+   static std::map<std::size_t,std::string> BacktraceCache;   
+   const int skip = 1;
+   static void *callstack[nMaxFrames];
    static char buf[1024];
-   int nFrames = backtrace(callstack, nMaxFrames);
-   char **symbols = backtrace_symbols(callstack, nFrames);
-
-   std::ostringstream trace_buf;
-   for (int i = skip; i < nFrames; i++) {
-      Dl_info info;
-      if (dladdr(callstack[i], &info) && info.dli_sname) {
-         char *demangled = NULL;
-         int status = -1;
-         if (info.dli_sname[0] == '_'){
-//             demangled = abi::__cxa_demangle(info.dli_sname, NULL, 0, &status);
-//          snprintf(buf, sizeof( buf), "%s",
-//             status == 0 ? demangled : info.dli_sname == 0 ? symbols[i] : info.dli_sname);
-//          free(demangled);
-            snprintf(buf, sizeof( buf), "%s", info.dli_sname);
+   static const auto sizeOfBuf (sizeof( buf));
+   const int nFrames = backtrace(callstack, nMaxFrames);
+   
+   auto stackPtrHash = getStackHash(callstack,nFrames);
+   auto stackStrIt = BacktraceCache.find(stackPtrHash);
+   if (stackStrIt != BacktraceCache.end()){
+      return stackStrIt->second;
+   }
+   
+   else {
+      char **symbols = backtrace_symbols(callstack, nFrames); // THIS TAKES TIME!
+      std::ostringstream trace_buf;
+      for (int i = skip; i < nFrames; i++) {
+         Dl_info info;
+         if (dladdr(callstack[i], &info) && info.dli_sname) {
+            char *demangled = NULL;
+            int status = -1;
+            if (info.dli_sname[0] == '_'){
+   //             demangled = abi::__cxa_demangle(info.dli_sname, NULL, 0, &status);
+   //          snprintf(buf, sizeof( buf), "%s",
+   //             status == 0 ? demangled : info.dli_sname == 0 ? symbols[i] : info.dli_sname);
+   //          free(demangled);
+               snprintf(buf, sizeof( buf), "%s", info.dli_sname);
+            }
+         } else {
+         snprintf(buf, sizeof(buf), "%s",symbols[i]);
          }
-      } else {
-      snprintf(buf, sizeof(buf), "%s",symbols[i]);
+         trace_buf << buf << "`";
       }
-      trace_buf << buf << "`";
-   }
 
-   free(symbols);
-   if (nFrames == nMaxFrames)
-      trace_buf << "[truncated]`";
-   return trace_buf.str();
-   }
+      free(symbols);
+      if (nFrames == nMaxFrames)
+         trace_buf << "[truncated]`";      
+      return BacktraceCache [stackPtrHash] = trace_buf.str();
+   }  
+}
 #else
 
 #define UNW_LOCAL_ONLY
