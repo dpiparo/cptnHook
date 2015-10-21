@@ -28,7 +28,9 @@ are saved in compressed binary format.
 static std::string GetCwd(){
    const std::size_t len = 4096;
    char cwdAsPtr[len];
-   getcwd(cwdAsPtr, len);
+   if (!getcwd(cwdAsPtr, len)){
+      logError("GetCwd","Could not get the name of the current directory.");
+   }
    std::string cwdAsString(cwdAsPtr);
    return cwdAsString;
 }
@@ -62,7 +64,8 @@ static std::string GetReportDir(){
    return GetCwd()+"/"+reportDirName;
 }
 
-// Get the backtrace
+#ifndef USE_LIBUNWIND
+// // Get the backtrace
 static std::string Backtrace(int skip = 1){
    static void *callstack[1024];
    const int nMaxFrames = sizeof(callstack) / sizeof(callstack[0]);
@@ -76,22 +79,57 @@ static std::string Backtrace(int skip = 1){
       if (dladdr(callstack[i], &info) && info.dli_sname) {
          char *demangled = NULL;
          int status = -1;
-         if (info.dli_sname[0] == '_')
-            demangled = abi::__cxa_demangle(info.dli_sname, NULL, 0, &status);
-         snprintf(buf, sizeof( buf), "%s",
-            status == 0 ? demangled : info.dli_sname == 0 ? symbols[i] : info.dli_sname);
-         free(demangled);
+         if (info.dli_sname[0] == '_'){
+//             demangled = abi::__cxa_demangle(info.dli_sname, NULL, 0, &status);
+//          snprintf(buf, sizeof( buf), "%s",
+//             status == 0 ? demangled : info.dli_sname == 0 ? symbols[i] : info.dli_sname);
+//          free(demangled);
+            snprintf(buf, sizeof( buf), "%s", info.dli_sname);
+         }
       } else {
       snprintf(buf, sizeof(buf), "%s",symbols[i]);
       }
-      trace_buf << buf << "@CR@";
+      trace_buf << buf << "`";
    }
 
    free(symbols);
    if (nFrames == nMaxFrames)
-      trace_buf << "[truncated]\\n\n";
+      trace_buf << "[truncated]`";
    return trace_buf.str();
+   }
+#else
+
+#define UNW_LOCAL_ONLY
+#include <libunwind.h>
+std::string Backtrace() {
+  unw_cursor_t cursor;
+  unw_context_t context;
+
+  // Initialize cursor to current frame for local unwinding.
+  unw_getcontext(&context);
+  unw_init_local(&cursor, &context);
+
+  // Unwind frames one by one, going up the frame stack.
+  unw_word_t offset, pc;
+  std::ostringstream trace_buf;
+  while (unw_step(&cursor) > 0) {    
+    unw_get_reg(&cursor, UNW_REG_IP, &pc);
+    if (pc == 0) {
+      break;
+    }
+    trace_buf << pc << "`";
+//     static char sym[2048];
+//     if (unw_get_proc_name(&cursor, sym, sizeof(sym), &offset) == 0) {
+// //       std::printf("%s\n", sym);
+//        trace_buf << sym << "`";
+//     } else {
+//        trace_buf << "err`";
+// //       std::printf("err\n");
+//     }
+  }
+  return trace_buf.str();
 }
+#endif
 
 // Here the hasher
 class Hasher{
