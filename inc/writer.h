@@ -38,7 +38,7 @@ public:
 
 template<>
 inline int Writer<float>::FlushCache() {
-   gzbuffer(fFilePtr, DEFAULTCACHESIZE);
+//   gzbuffer(fFilePtr, DEFAULTCACHESIZE);
    auto ret = gzwrite(fFilePtr, (void*) &(fCacheValues[0]), fElementSize*fCacheSize);
    fCacheSize = 0;
    return ret;
@@ -46,7 +46,7 @@ inline int Writer<float>::FlushCache() {
 
 template<>
 inline int Writer<double>::FlushCache() {
-   gzbuffer(fFilePtr, DEFAULTCACHESIZE);
+//   gzbuffer(fFilePtr, DEFAULTCACHESIZE);
    int ret(0);
    for (unsigned int i=0;i<fCacheSize;++i){
       auto& valHash = fCacheValues[i];
