@@ -37,14 +37,16 @@ public:
 };
 
 template<>
-inline int Writer<float>::FlushCache() {  
+inline int Writer<float>::FlushCache() {
+   gzbuffer(fFilePtr, DEFAULTCACHESIZE);
    auto ret = gzwrite(fFilePtr, (void*) &(fCacheValues[0]), fElementSize*fCacheSize);
    fCacheSize = 0;
    return ret;
 }
 
 template<>
-inline int Writer<double>::FlushCache() {  
+inline int Writer<double>::FlushCache() {
+   gzbuffer(fFilePtr, DEFAULTCACHESIZE);
    int ret(0);
    for (unsigned int i=0;i<fCacheSize;++i){
       auto& valHash = fCacheValues[i];
@@ -74,7 +76,6 @@ Writer<T>::Writer(const char* filename, std::size_t cacheSize):
       fCacheMaxSize(cacheSize),
       fCacheValues(cacheSize),
       fElementSize(sizeof(typename decltype(fCacheValues)::value_type)){
-//       gzbuffer(fFilePtr, DEFAULTCACHESIZE);
    };
    
 template<class T>
