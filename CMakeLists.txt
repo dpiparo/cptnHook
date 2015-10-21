@@ -24,7 +24,11 @@ macro(add_cptnHookLite_plugin name)
       LINKER_LANGUAGE CXX
       PREFIX "")
 
-   target_link_libraries(${name} "z" "dl" "m")         
+   if (USE_LIBUNWIND)
+      set(LIBUNWINDNAME "unwind")
+   endif()
+      
+   target_link_libraries(${name} "z" "dl" "m" ${LIBUNWINDNAME})
       
 endmacro(add_cptnHookLite_plugin)
 
@@ -73,17 +77,17 @@ macro(add_cptnHookLite_generic_test TEST_NAME TEST_REF)
    set(FULL_TEST_REF "${CMAKE_SOURCE_DIR}/test/${TEST_REF}")
    string(REPLACE ".cpp" ".ref" FULL_TEST_REF ${FULL_TEST_REF})
    add_test(NAME "${TEST_NAME}"
-     COMMAND "pippo" 
+     COMMAND "bin/cptnhook --root -o myTest -- " 
      WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
  endmacro(add_cptnHookLite_generic_test)
 
- macro(add_sas_test TEST_NAME)
+ macro(add_cptnhook_test TEST_NAME)
    add_cptnHookLite_generic_test("${TEST_NAME}" "${TEST_NAME}.ref")
- endmacro(add_sas_test)
+ endmacro(add_cptnhook_test)
 
 
 enable_testing()
 
-add_sas_test("writerReader")
-add_sas_test("simpleProg")
+add_cptnhook_test("writerReader")
+add_cptnhook_test("simpleProg")
 
