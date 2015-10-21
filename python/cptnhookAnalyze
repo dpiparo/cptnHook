@@ -8,6 +8,7 @@ import struct
 import argparse
 import gzip
 import array
+import subprocess
 import xml.etree.ElementTree as ET
 import ROOT
 
@@ -17,47 +18,102 @@ def getArgs():
     p.add_argument('--root', action='store_true', default = '', help='Create ROOT output.')
     return p.parse_args()
 
+frameNamesCache = {}
+
+def demangleFrameName(frameName):
+    if frameNamesCache.has_key(frameName): return frameNamesCache[frameName]
+    rawName=frameName   
+    # Case 1: it is of the form bla/bla/pluginSimulation.so(+0xab6c7a)
+    if ".so(+" in frameName:
+        libName,offset = frameName.split("(+")
+        offset=offset[:-1] # remove trailing )
+        cmdOut = subprocess.check_output(["addr2line", "-e", libName, "-fp", offset ])
+        frameName = cmdOut.split(" ")[0]
+    # Case 2: it is a normal mangled name
+    if len(frameName)>0 and frameName[0] == '_':
+        frameName = subprocess.check_output(["c++filt", frameName])
+    frameNamesCache[rawName]=frameName
+    return frameName
+
+def demangleBackTrace(btString):
+    rawFrameList = btString.split("`")[:-1]
+    demangledFrameList = map(demangleFrameName,rawFrameList)
+    return "".join(demangledFrameList)
+   
+
 def parseBTVector(profileDir):
     tree = ET.parse(profileDir+'/backtraceMap.xml')
-    root = tree.getroot()        
-    btVector = ROOT.std.vector('string')()
-    btVector.reserve(1024)           
+    root = tree.getroot()
+    hashBTList=[]
+    print "*** Processing stack traces."
+    nentries=0
     for bt in root.iter('bt'):
-        btStr =  bt.get('val').replace("`","\n")
-        #btHash =  int(bt.get('hash'))
+        nentries+=1
+        if 0 == nentries%10000 : print "   %s stacktraces analysed." %nentries
+        # TODO CHECK THE ORDER OF ITERATION
+        btStr =  bt.get('val')
+        btStr = demangleBackTrace(btStr)
+        theHash =  int(bt.get('hash'))
+        hashBTList.append([theHash,btStr])
+        
+    hashBTList.sort()    
+    
+    print "*** Filling C++ data structure."
+    btVector = ROOT.std.vector('string')()
+    btVector.reserve(len(hashBTList))
+    for btHash,btStr in hashBTList:
+        #print btHash,btStr
         btVector.push_back(btStr)
     return btVector
   
 def getTrees(profileDir):
-   '''Loop over compressed files and fill a tree per function.
-   It could be optimised reading more entries at the time'''
-   compressedFileNames = filter(lambda s: s.endswith("hook.gz") , os.listdir(profileDir))
-   trees = []
-   for compressedFileName in compressedFileNames:
-      print "*** Analysing %s ..." %compressedFileName      
-      isDp = ".dp." in compressedFileName
-      precisionMark = ".dp" if isDp else ".sp"
-      treeName = compressedFileName[:compressedFileName.index(precisionMark)]      
-      t = ROOT.TTree(treeName, treeName)
-      inputVal = array.array('d' if isDp else 'f', [0.])
-      hashVal = array.array('I', [0])
-      t.Branch("value", inputVal, "value/%s" % 'D' if isDp else 'F')
-      t.Branch("hash", hashVal, "hash/i")
-      
-      fpSize = 8 if isDp else 4
-      blockSize = fpSize + 4 # fp + unsigned int
-      dataDescr = 'dI' if isDp else 'fI' 
-      with gzip.open(profileDir+"/"+compressedFileName, 'rb') as compressedFile:
-          while True:
-              block = compressedFile.read(blockSize)              
-              if not block: break
-              val, theHash = struct.unpack_from(dataDescr, block)
-              inputVal[0] = val
-              hashVal[0] = theHash
-              t.Fill()
-      trees.append(t)
-      
-   return trees
+    '''Loop over compressed files and fill a tree per function.
+    It could be optimised reading more entries at the time'''
+    trees=[]
+    compressedFileNames = filter(lambda s: s.endswith("hook.gz") , os.listdir(profileDir))
+    for compressedFileName in compressedFileNames:
+        print "*** Analysing %s ..." %compressedFileName      
+        isDp = ".dp." in compressedFileName
+        precisionMark = ".dp" if isDp else ".sp"
+        treeName = compressedFileName[:compressedFileName.index(precisionMark)]      
+        t = ROOT.TTree(treeName, treeName)
+        inputVal = array.array('d' if isDp else 'f', [0.])
+        hashVal = array.array('I', [0])
+        t.Branch("value", inputVal, "value/%s" % 'D' if isDp else 'F')
+        t.Branch("hash", hashVal, "hash/i")
+       
+        fpSize = 8 if isDp else 4
+        blockSize = fpSize + 4 # fp + unsigned int
+        dataDescr = 'dI' if isDp else 'fI' 
+        
+        # loop on the entries
+        nentries = 0
+        with gzip.open(profileDir+"/"+compressedFileName, 'rb') as compressedFile:
+            while True:
+                block = compressedFile.read(blockSize)              
+                if not block: break
+                val, theHash = struct.unpack_from(dataDescr, block)
+                inputVal[0] = val
+                hashVal[0] = theHash
+                t.Fill()
+                nentries+=1
+                if 0 == nentries%1000000 : print "   %s entries written." %nentries    
+            #uncData = compressedFile.read()
+            #uncDataLen = len(uncData)
+            ## loop on the data
+            #cur = 0
+            #while cur < uncDataLen:
+                #block = uncData[cur:blockSize+cur]
+                #val, theHash = struct.unpack_from(dataDescr, block)
+                #inputVal[0] = val
+                #hashVal[0] = theHash
+                #t.Fill()
+                #nentries+=1
+                #if 0 == nentries%1000000 : print "    %s entries written." %nentries
+                #if nentries == 10000000: break #artificial
+                #cur+=blockSize
+        trees.append(t)
+    return trees
    
 def analyze(profileDir, toROOT = False):
     ''' Convert output to a ROOT file '''
@@ -65,13 +121,13 @@ def analyze(profileDir, toROOT = False):
     ofile = ROOT.TFile.Open(ofileName,"recreate")
     
     btVector = parseBTVector(profileDir)
-    trees = getTrees(profileDir)
-    
     ofile.WriteObject(btVector, "backtraceVector")
-    for tree in trees:
-       tree.Write()
-    ofile.Close()
     
+    trees = getTrees(profileDir)
+    for t in trees:
+        t.Write()
+        
+    ofile.Close()
     return 0
  
  
