@@ -2,10 +2,12 @@
 #include <cmath>
 
 void a(double x){
-   for (int i=0;i<30000;++i){
+   for (unsigned long int i=0;i<50000;++i){
       double y = x+i;
       double s = log(y);
-      std::cout << "In prog log("<< y << ")" <<  s << std::endl;
+      double ss = logf(y);
+      if (i%500 == 0)
+      std::cout << "In prog log("<< y << ")" <<  s << " " << ss << std::endl;
    }
 }
 
