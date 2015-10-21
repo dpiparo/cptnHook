@@ -23,7 +23,7 @@ def parseBTVector(profileDir):
     btVector = ROOT.std.vector('string')()
     btVector.reserve(1024)           
     for bt in root.iter('bt'):
-        btStr =  bt.get('val').replace("@CR@","\n")
+        btStr =  bt.get('val').replace("`","\n")
         #btHash =  int(bt.get('hash'))
         btVector.push_back(btStr)
     return btVector
