@@ -202,13 +202,18 @@ auto  getOriginalSym(const char* funcName) -> typename FuncType<T>::val {
    return (typename FuncType<T>::val) dlsym(RTLD_NEXT,funcName);
 };
 
+template<class T>
+inline void recordInput(T x, Writer<T>& writer) {
+   auto s = Backtrace();
+   writer.Write(x, gHasher.Hash(s));
+}
+
 /*
 writerTemplate = 'Writer<%s> %s%sWriter(GetWriterName<%s>("%s"));'
 interceptorTemplate = \
 '''
 auto %s(%s x) -> decltype(x){
-   auto s = Backtrace();
-   %s%sWriter.Write(x, gHasher.Hash(s));
+   recordInput(x, %s%sWriter);   
    static auto origf = getOriginalSym<%s>("%s");
    return origf(x);
 }'''
@@ -277,211 +282,181 @@ Writer<float> spAtanhWriter(GetWriterName<float>("atanhf"));
 Writer<float> spCbrtWriter(GetWriterName<float>("cbrtf"));
 
 auto exp(double x) -> decltype(x){
-   auto s = Backtrace();
-   dpExpWriter.Write(x, gHasher.Hash(s));
+   recordInput(x, dpExpWriter);   
    static auto origf = getOriginalSym<double>("exp");
    return origf(x);
 }
 
 auto log(double x) -> decltype(x){
-   auto s = Backtrace();
-   dpLogWriter.Write(x, gHasher.Hash(s));
+   recordInput(x, dpLogWriter);   
    static auto origf = getOriginalSym<double>("log");
    return origf(x);
 }
 
 auto sin(double x) -> decltype(x){
-   auto s = Backtrace();
-   dpSinWriter.Write(x, gHasher.Hash(s));
+   recordInput(x, dpSinWriter);   
    static auto origf = getOriginalSym<double>("sin");
    return origf(x);
 }
 
 auto asin(double x) -> decltype(x){
-   auto s = Backtrace();
-   dpAsinWriter.Write(x, gHasher.Hash(s));
+   recordInput(x, dpAsinWriter);   
    static auto origf = getOriginalSym<double>("asin");
    return origf(x);
 }
 
 auto cos(double x) -> decltype(x){
-   auto s = Backtrace();
-   dpCosWriter.Write(x, gHasher.Hash(s));
+   recordInput(x, dpCosWriter);   
    static auto origf = getOriginalSym<double>("cos");
    return origf(x);
 }
 
 auto acos(double x) -> decltype(x){
-   auto s = Backtrace();
-   dpAcosWriter.Write(x, gHasher.Hash(s));
+   recordInput(x, dpAcosWriter);   
    static auto origf = getOriginalSym<double>("acos");
    return origf(x);
 }
 
 auto tan(double x) -> decltype(x){
-   auto s = Backtrace();
-   dpTanWriter.Write(x, gHasher.Hash(s));
+   recordInput(x, dpTanWriter);   
    static auto origf = getOriginalSym<double>("tan");
    return origf(x);
 }
 
 auto atan(double x) -> decltype(x){
-   auto s = Backtrace();
-   dpAtanWriter.Write(x, gHasher.Hash(s));
+   recordInput(x, dpAtanWriter);   
    static auto origf = getOriginalSym<double>("atan");
    return origf(x);
 }
 
 auto sinh(double x) -> decltype(x){
-   auto s = Backtrace();
-   dpSinhWriter.Write(x, gHasher.Hash(s));
+   recordInput(x, dpSinhWriter);   
    static auto origf = getOriginalSym<double>("sinh");
    return origf(x);
 }
 
 auto asinh(double x) -> decltype(x){
-   auto s = Backtrace();
-   dpAsinhWriter.Write(x, gHasher.Hash(s));
+   recordInput(x, dpAsinhWriter);   
    static auto origf = getOriginalSym<double>("asinh");
    return origf(x);
 }
 
 auto cosh(double x) -> decltype(x){
-   auto s = Backtrace();
-   dpCoshWriter.Write(x, gHasher.Hash(s));
+   recordInput(x, dpCoshWriter);   
    static auto origf = getOriginalSym<double>("cosh");
    return origf(x);
 }
 
 auto acosh(double x) -> decltype(x){
-   auto s = Backtrace();
-   dpAcoshWriter.Write(x, gHasher.Hash(s));
+   recordInput(x, dpAcoshWriter);   
    static auto origf = getOriginalSym<double>("acosh");
    return origf(x);
 }
 
 auto tanh(double x) -> decltype(x){
-   auto s = Backtrace();
-   dpTanhWriter.Write(x, gHasher.Hash(s));
+   recordInput(x, dpTanhWriter);   
    static auto origf = getOriginalSym<double>("tanh");
    return origf(x);
 }
 
 auto atanh(double x) -> decltype(x){
-   auto s = Backtrace();
-   dpAtanhWriter.Write(x, gHasher.Hash(s));
+   recordInput(x, dpAtanhWriter);   
    static auto origf = getOriginalSym<double>("atanh");
    return origf(x);
 }
 
 auto cbrt(double x) -> decltype(x){
-   auto s = Backtrace();
-   dpCbrtWriter.Write(x, gHasher.Hash(s));
+   recordInput(x, dpCbrtWriter);   
    static auto origf = getOriginalSym<double>("cbrt");
    return origf(x);
 }
 
 auto expf(float x) -> decltype(x){
-   auto s = Backtrace();
-   spExpWriter.Write(x, gHasher.Hash(s));
+   recordInput(x, spExpWriter);   
    static auto origf = getOriginalSym<float>("expf");
    return origf(x);
 }
 
 auto logf(float x) -> decltype(x){
-   auto s = Backtrace();
-   spLogWriter.Write(x, gHasher.Hash(s));
+   recordInput(x, spLogWriter);   
    static auto origf = getOriginalSym<float>("logf");
    return origf(x);
 }
 
 auto sinf(float x) -> decltype(x){
-   auto s = Backtrace();
-   spSinWriter.Write(x, gHasher.Hash(s));
+   recordInput(x, spSinWriter);   
    static auto origf = getOriginalSym<float>("sinf");
    return origf(x);
 }
 
 auto asinf(float x) -> decltype(x){
-   auto s = Backtrace();
-   spAsinWriter.Write(x, gHasher.Hash(s));
+   recordInput(x, spAsinWriter);   
    static auto origf = getOriginalSym<float>("asinf");
    return origf(x);
 }
 
 auto cosf(float x) -> decltype(x){
-   auto s = Backtrace();
-   spCosWriter.Write(x, gHasher.Hash(s));
+   recordInput(x, spCosWriter);   
    static auto origf = getOriginalSym<float>("cosf");
    return origf(x);
 }
 
 auto acosf(float x) -> decltype(x){
-   auto s = Backtrace();
-   spAcosWriter.Write(x, gHasher.Hash(s));
+   recordInput(x, spAcosWriter);   
    static auto origf = getOriginalSym<float>("acosf");
    return origf(x);
 }
 
 auto tanf(float x) -> decltype(x){
-   auto s = Backtrace();
-   spTanWriter.Write(x, gHasher.Hash(s));
+   recordInput(x, spTanWriter);   
    static auto origf = getOriginalSym<float>("tanf");
    return origf(x);
 }
 
 auto atanf(float x) -> decltype(x){
-   auto s = Backtrace();
-   spAtanWriter.Write(x, gHasher.Hash(s));
+   recordInput(x, spAtanWriter);   
    static auto origf = getOriginalSym<float>("atanf");
    return origf(x);
 }
 
 auto sinhf(float x) -> decltype(x){
-   auto s = Backtrace();
-   spSinhWriter.Write(x, gHasher.Hash(s));
+   recordInput(x, spSinhWriter);   
    static auto origf = getOriginalSym<float>("sinhf");
    return origf(x);
 }
 
 auto asinhf(float x) -> decltype(x){
-   auto s = Backtrace();
-   spAsinhWriter.Write(x, gHasher.Hash(s));
+   recordInput(x, spAsinhWriter);   
    static auto origf = getOriginalSym<float>("asinhf");
    return origf(x);
 }
 
 auto coshf(float x) -> decltype(x){
-   auto s = Backtrace();
-   spCoshWriter.Write(x, gHasher.Hash(s));
+   recordInput(x, spCoshWriter);   
    static auto origf = getOriginalSym<float>("coshf");
    return origf(x);
 }
 
 auto acoshf(float x) -> decltype(x){
-   auto s = Backtrace();
-   spAcoshWriter.Write(x, gHasher.Hash(s));
+   recordInput(x, spAcoshWriter);   
    static auto origf = getOriginalSym<float>("acoshf");
    return origf(x);
 }
 
 auto tanhf(float x) -> decltype(x){
-   auto s = Backtrace();
-   spTanhWriter.Write(x, gHasher.Hash(s));
+   recordInput(x, spTanhWriter);   
    static auto origf = getOriginalSym<float>("tanhf");
    return origf(x);
 }
 
 auto atanhf(float x) -> decltype(x){
-   auto s = Backtrace();
-   spAtanhWriter.Write(x, gHasher.Hash(s));
+   recordInput(x, spAtanhWriter);   
    static auto origf = getOriginalSym<float>("atanhf");
    return origf(x);
 }
 
-auto cbrtf(double x) -> decltype(x){
-   auto s = Backtrace();
-   spCbrtWriter.Write(x, gHasher.Hash(s));
-   static auto origf = getOriginalSym<double>("cbrtf");
+auto cbrtf(float x) -> decltype(x){
+   recordInput(x, spCbrtWriter);   
+   static auto origf = getOriginalSym<float>("cbrtf");
    return origf(x);
 }
