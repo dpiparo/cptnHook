@@ -16,41 +16,70 @@ Possible optimisations:
 
 
 const char* DEFAULTWRITEMODE="wb9h";
+const unsigned int DEFAULTCACHESIZE = 1048576; // 1MB
 
 template<class T>
 class Writer {
 private:
-   std::string fFileName = "";
-   gzFile fFilePtr = nullptr;
+   const std::string fFileName = "";
+   const gzFile fFilePtr = nullptr;
+   const std::size_t fCacheMaxSize = 0;
    std::size_t fCacheSize = 0;
-   std::vector<std::pair<T,int>> fCacheValues; // not used yet
+   std::vector<std::pair<T,int>> fCacheValues;
+   const unsigned short int fElementSize = 0;
+   int FlushCache();
 public:
-   Writer(const std::string& filename, std::size_t cacheSize = 4096):Writer(filename.c_str(),cacheSize){};
-   Writer(const char* filename, std::size_t cacheSize = 4096);
+   Writer(const std::string& filename, std::size_t cacheSize = DEFAULTCACHESIZE):Writer(filename.c_str(),cacheSize){};
+   Writer(const char* filename, std::size_t cacheSize = DEFAULTCACHESIZE);
    ~Writer();
    Writer(const Writer&) = delete;
    int Write(T x, unsigned int hash );
 };
 
+template<>
+inline int Writer<float>::FlushCache() {  
+   auto ret = gzwrite(fFilePtr, (void*) &(fCacheValues[0]), fElementSize*fCacheSize);
+   fCacheSize = 0;
+   return ret;
+}
+
+template<>
+inline int Writer<double>::FlushCache() {  
+   int ret(0);
+   for (unsigned int i=0;i<fCacheSize;++i){
+      auto& valHash = fCacheValues[i];
+      ret += gzwrite(fFilePtr, (void*) (&(valHash.first)), 8);
+      ret += gzwrite(fFilePtr, (void*) (&(valHash.second)), 4);
+   }
+   fCacheSize = 0;
+   return ret;
+}
+
+
 template<class T>
 inline int Writer<T>::Write(T x, unsigned int hash ) {
-   // LAME
-   auto ret = gzwrite(fFilePtr, (void*) (&x), sizeof(T));
-   ret += gzwrite(fFilePtr, (void*) (&hash), sizeof(decltype(hash)));
+   int ret = 0;
+   if (fCacheSize != fCacheMaxSize) {
+      fCacheValues[fCacheSize++] = std::pair<T, unsigned int>(x, hash);
+   } else {
+      ret = FlushCache();
+   }
    return ret;
 }
 
 template<class T>
 Writer<T>::Writer(const char* filename, std::size_t cacheSize):
       fFileName(filename),
-      fCacheSize(cacheSize){
-   
-   fFilePtr = gzopen(filename,DEFAULTWRITEMODE);
-   fCacheValues.reserve(cacheSize);
+      fFilePtr(gzopen(filename,DEFAULTWRITEMODE)),      
+      fCacheMaxSize(cacheSize),
+      fCacheValues(cacheSize),
+      fElementSize(sizeof(typename decltype(fCacheValues)::value_type)){
+      gzbuffer(fFilePtr, DEFAULTCACHESIZE);
    };
    
 template<class T>
 Writer<T>::~Writer(){
+   FlushCache();
    gzclose(fFilePtr);      
 }
 
