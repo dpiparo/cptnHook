@@ -83,7 +83,7 @@ std::size_t getStackHash(void **ptrArr, int size){
 static const std::string& Backtrace(){
    const int nMaxFrames = 128;
    static std::map<std::size_t,std::string> BacktraceCache;   
-   const int skip = 1;
+   const int skip = 2; // One for this function and one for the math function!
    static void *callstack[nMaxFrames];
    static char buf[1024];
    static const auto sizeOfBuf (sizeof( buf));
