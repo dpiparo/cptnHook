@@ -266,8 +266,8 @@ def formLink(name,target=None, anchor=False):
    return '<a %s="%s">%s</a>' %(attrName,target,name)
 
 def formFooter(backTo="index"):
-   s = formLink("Back to %s" %backTo , "%s.html" %backTo) if backTo else ""
-   return "%s<br>\n</body></html>" %s
+   s = formLink("Back to %s" %backTo , "%s.html" %backTo) if backTo!="" else ""
+   return "<br><br>%s<br>\n</body></html>" %s
 
 def formTitle(title):
    return "<html></body><h1>CptnHook Report %s</h1>\n" %title
@@ -287,7 +287,8 @@ def createStackTraces(name, reportDirName, hBtDict):
        stackPage += formFooter("stacktraces")
        with open("%s/%s.html" %(reportDirName,key), "w") as ofile:
            ofile.write(stackPage)
-    header=header[:-1]
+    if header[-1] == ',': header=header[:-1]
+    if header.endswith(",<br>"): header=header[:-5]+"<br>"
     
     pageContent+=header
     
@@ -321,12 +322,13 @@ def createIndex(name, indexName, theData):
     table += formTableRow(["Fcn Name","N Calls", "Min", "Max", "Distinct Traces"], headings=True)
     for singleCumStat in cumStats:
         singleCumStat[0] = formLink(singleCumStat[0])
-        table += formTableRow(singleCumStat)
+        if singleCumStat[1] != 0:
+            table += formTableRow(singleCumStat)
     table += "</table>\n"
     pageContent+=table    
     pageContent+="<br>"
     pageContent+="Click %s to inspect the stack traces.\n" % formLink("stacktraces")
-    pageContent+= formFooter(None)
+    pageContent+= formFooter("")
     
     with open(indexName, "w") as ofile:
         ofile.write(pageContent)
