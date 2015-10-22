@@ -6,9 +6,10 @@ import sys
 import os
 import struct
 import argparse
-import gzip
 import array
 import subprocess
+import time
+import io
 import xml.etree.ElementTree as ET
 
 #------------------------------------------------------------------------------
@@ -35,8 +36,8 @@ def demangleFrameName(frameName):
     if ".so(+" in frameName:
         libName,offset = frameName.split("(+")
         offset=offset[:-1] # remove trailing )
-        #cmdOut = subprocess.check_output(["addr2line", "-e", libName, "-fp", offset ])
-        #frameName = cmdOut.split(" ")[0]
+        cmdOut = subprocess.check_output(["addr2line", "-e", libName, "-fp", offset ])
+        frameName = cmdOut.split(" ")[0]
     # Case 2: it is a normal mangled name
     if len(frameName)>0 and frameName[0] == '_':
         frameName = subprocess.check_output(["c++filt", frameName])
@@ -141,7 +142,9 @@ class VanillaAnalyzer:
 def loopOnData(profileDir, analyzer):
     print "*** Start looping on compressed files ..."
     compressedFileNames = filter(lambda s: s.endswith("hook.gz") , os.listdir(profileDir))
-    for compressedFileName in compressedFileNames:        
+    for compressedFileName in compressedFileNames:   
+        print "*** Reading %s ..." %compressedFileName
+        start = time.time()
         isDp = ".dp." in compressedFileName
         precisionMark = ".dp" if isDp else ".sp"                  
        
@@ -153,16 +156,40 @@ def loopOnData(profileDir, analyzer):
         
         # loop on the entries
         nentries = 0
-        with gzip.open(profileDir+"/"+compressedFileName, 'rb') as compressedFile:
-            while True:
-                # Here reading in big chuncks does not make any difference in speed
-                block = compressedFile.read(blockSize)              
-                if not block: break
-                val, theHash = struct.unpack_from(dataDescr, block)
-                analyzer.Execute(val, theHash)
-                nentries+=1
-                if 0 == nentries%1000000 : print "   %s entries written." %nentries
-            analyzer.Finalize()
+        
+        tmp_fifo = "tmp_fifo"
+        if os.path.exists(tmp_fifo): os.unlink(tmp_fifo)
+        os.mkfifo(tmp_fifo)
+ 
+        proc = subprocess.Popen("gzip --stdout -d %s > %s" %(profileDir+"/"+compressedFileName,tmp_fifo), shell=True)
+        decompressedFile = io.open(tmp_fifo, "rb")
+        # Potential improvement: Parallelisation!
+        while True:
+            #Here reading in big chuncks does not make any difference in speed
+            block = decompressedFile.read(blockSize)
+            if not block: break
+            val, theHash = struct.unpack_from(dataDescr, block)
+            analyzer.Execute(val, theHash)
+            nentries+=1
+            if 0 == nentries%1000000 : print "   %s entries read." %nentries
+            
+        analyzer.Finalize()
+        if os.path.exists(tmp_fifo): os.unlink(tmp_fifo)
+        print "*** Read in %.1f seconds ..." %(time.time() - start)
+        
+        # Much slower:
+        #with gzip.open(profileDir+"/"+compressedFileName, 'rb') as compressedFile:
+            #while True:
+                ## Here reading in big chuncks does not make any difference in speed
+                #block = compressedFile.read(blockSize)              
+                #if not block: break
+                #val, theHash = struct.unpack_from(dataDescr, block)
+                #analyzer.Execute(val, theHash)
+                #nentries+=1
+                #if 0 == nentries%1000000 : print "   %s entries written." %nentries
+                #if nentries == 10000000: break
+            #analyzer.Finalize()
+        #print "finished ", time.time() - start
     return analyzer
 
 #def getTrees(profileDir):
@@ -242,6 +269,7 @@ def getCumulativeStats(theData):
            if first: 
               theMin = stackmin
               theMax = stackmax
+              first = False
            else:
               if theMin > stackmin: theMin = stackmin
               if theMax < stackmax: theMax = stackmax
