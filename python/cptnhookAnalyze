@@ -162,7 +162,6 @@ def loopOnData(profileDir, analyzer):
                 analyzer.Execute(val, theHash)
                 nentries+=1
                 if 0 == nentries%1000000 : print "   %s entries written." %nentries
-                if nentries == 100000: break
             analyzer.Finalize()
     return analyzer
 
