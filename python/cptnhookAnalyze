@@ -88,6 +88,7 @@ class ROOTAnalyzer:
         self.__inputVal = None
         self.__hashVal = None
     def Initialize(self, compressedFileName):
+        import ROOT
         isDp = ".dp." in compressedFileName
         precisionMark = ".dp" if isDp else ".sp"
         treeName = compressedFileName[:compressedFileName.index(precisionMark)]      
@@ -101,7 +102,7 @@ class ROOTAnalyzer:
     def Execute(self,val,theHash):        
         self.__inputVal[0] = val
         self.__hashVal[0] = theHash
-        t.Fill()        
+        self.__curTree.Fill()
     def Finalize(self):
         pass
     def GetTrees(self):
@@ -406,61 +407,4 @@ if __name__ == "__main__":
     args = getArgs()
     retcode = analyze(profileDir = args.profileDir[0], toROOT = args.root)
     sys.exit(retcode)
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
+
