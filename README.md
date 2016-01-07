@@ -20,6 +20,12 @@ cptnhook -o myFirstProfile -- myprogram --arg1 --arg2 arg3
 ~~~
 This will generate a directory called `myFirstProfile` containing the raw profile. The information
 
+### List of intercepted functions
+The list of intercepted functions is the following (both single and double precision):
+* **sin**, **cos**, **exp**, **tan**, **sinh**, **cosh**, **tanh**
+ * The inverse of the above ones
+* **cbrt**
+
 ## How to produce a report
 ~~~
 cptnhook-analyze myFirstProfile
